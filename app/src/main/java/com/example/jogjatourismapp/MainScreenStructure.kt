@@ -291,6 +291,7 @@ fun PlannedVisitItem(plan: PlannedVisit) {
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
+                    // Tampilkan Tanggal
                     Text(
                         text = plan.date,
                         style = MaterialTheme.typography.bodyMedium,
@@ -302,21 +303,34 @@ fun PlannedVisitItem(plan: PlannedVisit) {
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                    horizontalArrangement = Arrangement.Start, // Rata kiri agar rapi
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    InfoChip(icon = Icons.Default.Schedule, text = plan.time)
-                    InfoChip(icon = Icons.Default.Group, text = "${plan.personCount} orang")
-                    InfoChip(icon = Icons.Default.Timer, text = plan.estimatedDuration)
+                    // Menampilkan Rentang Jam (Mulai - Selesai)
+                    InfoChip(
+                        icon = Icons.Default.Schedule,
+                        text = "${plan.startTime} - ${plan.endTime}"
+                    )
+
+                    Spacer(Modifier.width(16.dp))
+
+                    // Menampilkan Jumlah Orang
+                    InfoChip(
+                        icon = Icons.Default.Group,
+                        text = "${plan.personCount} org"
+                    )
                 }
 
                 if (dest.price > 0) {
                     Spacer(Modifier.height(12.dp))
+                    Divider()
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Estimasi Biaya: Rp ${formatPrice(dest.price * plan.personCount)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.align(Alignment.End)
+                        text = "Total: Rp ${formatPrice(dest.price * plan.personCount)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.End),
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

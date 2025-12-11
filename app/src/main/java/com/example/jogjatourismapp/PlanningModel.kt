@@ -13,16 +13,14 @@ data class PlannedVisit(
     val visitId: Long = System.currentTimeMillis(),
     val destinationId: Int,
     val date: String,
-    val time: String,
+    val startTime: String, // Diubah dari 'time'
+    val endTime: String,   // Diubah dari 'estimatedDuration'
     val personCount: Int,
-    val estimatedDuration: String,
     val notes: String
 ) : Parcelable
 
 object PlanningViewModel {
     val plannedVisits: SnapshotStateList<PlannedVisit> = mutableStateListOf()
-
-    // Flag untuk menandakan apakah harus buka Wishlist setelah save
     var shouldOpenWishlist: Boolean by mutableStateOf(false)
 
     fun addPlan(plan: PlannedVisit) {
