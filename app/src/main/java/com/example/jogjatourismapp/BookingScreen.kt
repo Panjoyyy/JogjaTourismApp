@@ -3,6 +3,7 @@ package com.example.jogjatourismapp
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.widget.DatePicker
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +22,7 @@ import java.util.*
 @Composable
 fun BookingScreen(
     destinationId: Int,
+    visitIdToEdit: Long = -1L, // Parameter untuk Mode Edit (Default -1 artinya Mode Baru)
     onBackClicked: () -> Unit,
     onSaveClicked: () -> Unit
 ) {
@@ -32,6 +34,19 @@ fun BookingScreen(
     var startTime by remember { mutableStateOf("") } // Jam Mulai
     var endTime by remember { mutableStateOf("") }   // Jam Selesai
     var personCount by remember { mutableStateOf(1) }
+
+    // --- LOGIC 1: Load Data Lama Jika Mode Edit ---
+    LaunchedEffect(visitIdToEdit) {
+        if (visitIdToEdit != -1L) {
+            val existingPlan = PlanningViewModel.getPlanById(visitIdToEdit)
+            existingPlan?.let {
+                selectedDate = it.date
+                startTime = it.startTime
+                endTime = it.endTime
+                personCount = it.personCount
+            }
+        }
+    }
 
     // Validasi form: Pastikan tanggal, jam mulai, dan jam selesai terisi
     val isFormValid by remember {
@@ -68,7 +83,8 @@ fun BookingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rencanakan Kunjungan") },
+                // Ubah Judul Berdasarkan Mode
+                title = { Text(if (visitIdToEdit != -1L) "Edit Rencana" else "Rencanakan Kunjungan") },
                 navigationIcon = { IconButton(onClick = onBackClicked) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
                 } }
@@ -105,7 +121,7 @@ fun BookingScreen(
 
                 Spacer(Modifier.height(16.dp))
 
-                // --- 2. Input Jam Mulai & Selesai (Side by Side) ---
+                // --- 2. Input Jam Mulai & Selesai ---
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Tombol Jam Mulai
                     OutlinedButton(
@@ -192,21 +208,58 @@ fun BookingScreen(
             // --- Tombol Simpan ---
             Button(
                 onClick = {
-                    val newPlan = PlannedVisit(
-                        destinationId = destinationId,
-                        date = selectedDate,
-                        startTime = startTime, // Simpan jam mulai
-                        endTime = endTime,     // Simpan jam selesai
-                        personCount = personCount,
-                        notes = ""
+                    // Validasi 1: Jam Selesai > Jam Mulai
+                    if (startTime >= endTime) {
+                        Toast.makeText(context, "Jam selesai harus setelah jam mulai!", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
+                    // Validasi 2: Cek Konflik (Kirim visitIdToEdit agar tidak bentrok dengan diri sendiri)
+                    val isConflict = PlanningViewModel.hasTimeConflict(
+                        newDate = selectedDate,
+                        newStartTime = startTime,
+                        newEndTime = endTime,
+                        excludeVisitId = visitIdToEdit
                     )
-                    PlanningViewModel.addPlan(newPlan)
-                    onSaveClicked()
+
+                    if (isConflict) {
+                        Toast.makeText(context, "Jadwal bentrok dengan rencana lain!", Toast.LENGTH_LONG).show()
+                    } else {
+                        // --- LOGIC SIMPAN ---
+                        if (visitIdToEdit != -1L) {
+                            // MODE UPDATE: Gunakan ID lama
+                            val updatedPlan = PlannedVisit(
+                                visitId = visitIdToEdit,
+                                destinationId = destinationId,
+                                date = selectedDate,
+                                startTime = startTime,
+                                endTime = endTime,
+                                personCount = personCount,
+                                notes = ""
+                            )
+                            PlanningViewModel.updatePlan(updatedPlan)
+                            Toast.makeText(context, "Rencana berhasil diperbarui!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // MODE BARU: Buat baru
+                            val newPlan = PlannedVisit(
+                                destinationId = destinationId,
+                                date = selectedDate,
+                                startTime = startTime,
+                                endTime = endTime,
+                                personCount = personCount,
+                                notes = ""
+                            )
+                            PlanningViewModel.addPlan(newPlan)
+                            Toast.makeText(context, "Rencana berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                        }
+                        onSaveClicked()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = isFormValid
             ) {
-                Text("Simpan Rencana")
+                // Teks Tombol Berubah Sesuai Mode
+                Text(if (visitIdToEdit != -1L) "Simpan Perubahan" else "Simpan Rencana")
             }
             Spacer(Modifier.height(16.dp))
         }

@@ -77,24 +77,35 @@ fun AppRootNavHost() {
                     Toast.makeText(context, "Ditambahkan ke Wishlist!", Toast.LENGTH_SHORT).show()
                 },
                 onPlanningClick = { destinationId ->
+                    // Navigasi buat baru (tanpa visitId, otomatis default -1)
                     rootNavController.navigate("booking/$destinationId")
                 }
             )
         }
 
+        // --- UPDATE 1: Rute Booking menerima parameter opsional visitId ---
         composable(
-            route = "booking/{destinationId}",
-            arguments = listOf(navArgument("destinationId") { type = NavType.IntType })
+            route = "booking/{destinationId}?visitId={visitId}",
+            arguments = listOf(
+                navArgument("destinationId") { type = NavType.IntType },
+                navArgument("visitId") {
+                    type = NavType.LongType
+                    defaultValue = -1L // Default -1 artinya mode Buat Baru
+                }
+            )
         ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("destinationId") ?: 0
+            val destinationId = backStackEntry.arguments?.getInt("destinationId") ?: 0
+            val visitId = backStackEntry.arguments?.getLong("visitId") ?: -1L
 
             BookingScreen(
-                destinationId = id,
+                destinationId = destinationId,
+                visitIdToEdit = visitId, // Kirim ID ke layar booking
                 onBackClicked = { rootNavController.popBackStack() },
                 onSaveClicked = {
-                    Toast.makeText(context, "Rencana berhasil disimpan!", Toast.LENGTH_LONG).show()
+                    // Pesan sukses sudah ditangani di dalam BookingScreen logic (opsional bisa dihapus disini)
+                    // Toast.makeText(context, "Berhasil disimpan!", Toast.LENGTH_LONG).show()
 
-                    // Set target tab ke Wishlist
+                    // Set target tab ke Wishlist agar user langsung melihat hasilnya
                     NavigationState.targetTab = Screen.WishlistPlanning.route
 
                     // Kembali ke main screen
@@ -109,26 +120,18 @@ fun AppRootNavHost() {
 @Composable
 fun MainBottomNavScreen(rootNavController: NavHostController) {
     val homeNavController = rememberNavController()
-
-    // Observasi perubahan target tab
-    // Pastikan ini membaca langsung dari state object
     val targetTab = NavigationState.targetTab
 
-    // Handle navigasi otomatis ke tab target
+    // Handle navigasi otomatis ke tab target (Wishlist) setelah simpan
     LaunchedEffect(targetTab) {
         targetTab?.let { route ->
             homeNavController.navigate(route) {
-                // --- PERBAIKAN DI SINI ---
-                // Kita harus menyamakan logic ini dengan logic di BottomNavBar
-
                 popUpTo(Screen.Home.route) {
-                    saveState = true // PENTING: Simpan state Home sebelum pindah paksa
+                    saveState = true
                 }
                 launchSingleTop = true
-                restoreState = true // PENTING: Restore state halaman tujuan jika pernah dibuka
+                restoreState = true
             }
-
-            // Reset target tab setelah navigasi selesai
             NavigationState.targetTab = null
         }
     }
@@ -151,8 +154,12 @@ fun MainBottomNavScreen(rootNavController: NavHostController) {
                 )
             }
 
+            // --- UPDATE 2: Kirim rootNavController ke WishlistPlanningScreen ---
             composable(Screen.WishlistPlanning.route) {
-                WishlistPlanningScreen(plannedVisits = PlanningViewModel.plannedVisits)
+                WishlistPlanningScreen(
+                    plannedVisits = PlanningViewModel.plannedVisits,
+                    navController = rootNavController // Diperlukan untuk navigasi ke Edit
+                )
             }
 
             composable(Screen.Profile.route) {
