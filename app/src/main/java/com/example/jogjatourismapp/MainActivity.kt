@@ -1,23 +1,24 @@
 package com.example.jogjatourismapp
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.jogjatourismapp.ui.theme.JogjaTourismAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -34,69 +35,158 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Composable utama yang mendefinisikan seluruh struktur navigasi aplikasi.
+// Object untuk menyimpan state navigasi
+object NavigationState {
+    var targetTab: String? by mutableStateOf(null)
+}
+
 @Composable
 fun AppRootNavHost() {
-    // NavController yang mengelola rute utama
-    val navController = rememberNavController()
+    val rootNavController = rememberNavController()
+    val context = LocalContext.current
 
-    // State sederhana untuk simulasi status login.
-    // Ganti ini dengan logika pengecekan status autentikasi yang sebenarnya nanti.
-    var isLoggedIn by remember { mutableStateOf(false) }
-
-    // Logika navigasi bersyarat:
-    // Jika sudah login, langsung ke Bottom Nav Graph. Jika belum, ke Splash.
-    val startDestination = if (isLoggedIn) Screen.HomeNavGraph.route else Screen.SplashLanding.route
-
-    // NavHost adalah wadah yang menghubungkan rute (URL) dengan Composable (Layar)
     NavHost(
-        navController = navController,
-        startDestination = startDestination
+        navController = rootNavController,
+        startDestination = Screen.SplashLanding.route
     ) {
-
-        // --- 1. SPLASH / LANDING PAGE (View 1) ---
         composable(Screen.SplashLanding.route) {
             SplashLandingScreen(
                 onStartClick = {
-                    // Navigasi ke Bottom Nav (Home) tanpa Login
-                    navController.navigate(Screen.HomeNavGraph.route) {
-                        // popUpTo menghapus Splash dari back stack agar tombol Back keluar dari aplikasi
+                    rootNavController.navigate(Screen.HomeNavGraph.route) {
                         popUpTo(Screen.SplashLanding.route) { inclusive = true }
                     }
                 },
-                onLoginClick = {
-                    // Pindah ke Halaman Login
-                    navController.navigate(Screen.Login.route)
-                }
+                onLoginClick = { }
             )
         }
 
-
-        // --- 3. BOTTOM NAV GRAPH (Root untuk View 2, 4, 5) ---
-        // MainScreenStructure berisi Bottom Bar dan NavHost tersendiri (Nested NavGraph)
         composable(Screen.HomeNavGraph.route) {
-            MainScreenStructure(rootNavController = navController)
+            MainBottomNavScreen(rootNavController = rootNavController)
         }
 
-        // --- 4. DETAIL DESTINASI (View 3) ---
         composable(
             route = Screen.Detail().route,
-            arguments = listOf(
-                // Mendefinisikan argumen yang akan diterima (ID destinasi)
-                navArgument("destinationId") { type = NavType.IntType }
-            )
+            arguments = listOf(navArgument("destinationId") { type = NavType.IntType })
         ) { backStackEntry ->
-            // Mengambil ID yang dikirim dari Home Screen
             val id = backStackEntry.arguments?.getInt("destinationId") ?: 0
 
             DetailDestinationScreen(
                 destinationId = id,
-                onBackClicked = { navController.popBackStack() }, // Kembali ke layar sebelumnya (Home)
+                onBackClicked = { rootNavController.popBackStack() },
                 onWishlistClick = {
-                    // TODO: Tampilkan Toast/Snackbar untuk konfirmasi
+                    Toast.makeText(context, "Ditambahkan ke Wishlist!", Toast.LENGTH_SHORT).show()
                 },
-                onPlanningClick = {
-                    // TODO: Tampilkan Toast/Snackbar untuk konfirmasi
+                onPlanningClick = { destinationId ->
+                    rootNavController.navigate("booking/$destinationId")
+                }
+            )
+        }
+
+        composable(
+            route = "booking/{destinationId}",
+            arguments = listOf(navArgument("destinationId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("destinationId") ?: 0
+
+            BookingScreen(
+                destinationId = id,
+                onBackClicked = { rootNavController.popBackStack() },
+                onSaveClicked = {
+                    Toast.makeText(context, "Rencana berhasil disimpan!", Toast.LENGTH_LONG).show()
+
+                    // Set target tab ke Wishlist
+                    NavigationState.targetTab = Screen.WishlistPlanning.route
+
+                    // Kembali ke main screen
+                    rootNavController.popBackStack(Screen.HomeNavGraph.route, false)
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainBottomNavScreen(rootNavController: NavHostController) {
+    val homeNavController = rememberNavController()
+
+    // Observasi perubahan target tab
+    // Pastikan ini membaca langsung dari state object
+    val targetTab = NavigationState.targetTab
+
+    // Handle navigasi otomatis ke tab target
+    LaunchedEffect(targetTab) {
+        targetTab?.let { route ->
+            homeNavController.navigate(route) {
+                // --- PERBAIKAN DI SINI ---
+                // Kita harus menyamakan logic ini dengan logic di BottomNavBar
+
+                popUpTo(Screen.Home.route) {
+                    saveState = true // PENTING: Simpan state Home sebelum pindah paksa
+                }
+                launchSingleTop = true
+                restoreState = true // PENTING: Restore state halaman tujuan jika pernah dibuka
+            }
+
+            // Reset target tab setelah navigasi selesai
+            NavigationState.targetTab = null
+        }
+    }
+
+    Scaffold(
+        bottomBar = {
+            BottomNavBar(homeNavController = homeNavController)
+        }
+    ) { paddingValues ->
+        NavHost(
+            navController = homeNavController,
+            startDestination = Screen.Home.route,
+            modifier = Modifier.padding(paddingValues)
+        ) {
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    onDestinationClick = { destinationId ->
+                        rootNavController.navigate(Screen.Detail().createRoute(destinationId))
+                    }
+                )
+            }
+
+            composable(Screen.WishlistPlanning.route) {
+                WishlistPlanningScreen(plannedVisits = PlanningViewModel.plannedVisits)
+            }
+
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    onLogout = {
+                        rootNavController.navigate(Screen.SplashLanding.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomNavBar(homeNavController: NavHostController) {
+    val navBackStackEntry by homeNavController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    NavigationBar {
+        bottomNavItems.forEach { item ->
+            NavigationBarItem(
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                onClick = {
+                    homeNavController.navigate(item.route) {
+                        popUpTo(Screen.Home.route) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 }
             )
         }
