@@ -9,8 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 // Item yang akan ditampilkan di Bottom Navigation Bar
@@ -70,8 +70,35 @@ fun HomeScreen(onDestinationClick: (Int) -> Unit) {
 
 @Composable
 fun WishlistPlanningScreen(
-    plannedVisits: List<PlannedVisit>
+    plannedVisits: List<PlannedVisit>,
+    navController: NavController // Tambahkan parameter ini untuk navigasi edit
 ) {
+    // State untuk dialog hapus
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var planToDelete by remember { mutableStateOf<PlannedVisit?>(null) }
+
+    // Dialog Konfirmasi Hapus
+    if (showDeleteDialog && planToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Rencana") },
+            text = { Text("Apakah Anda yakin ingin menghapus rencana ke tempat ini?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    PlanningViewModel.removePlan(planToDelete!!)
+                    showDeleteDialog = false
+                }) {
+                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -115,7 +142,17 @@ fun WishlistPlanningScreen(
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(plannedVisits.sortedBy { it.date }) { plan ->
-                    PlannedVisitItem(plan = plan)
+                    PlannedVisitItem(
+                        plan = plan,
+                        onEditClick = {
+                            // Navigasi ke BookingScreen dengan parameter visitId
+                            navController.navigate("booking/${plan.destinationId}?visitId=${plan.visitId}")
+                        },
+                        onDeleteClick = {
+                            planToDelete = plan
+                            showDeleteDialog = true
+                        }
+                    )
                 }
             }
         }
@@ -125,7 +162,9 @@ fun WishlistPlanningScreen(
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -264,7 +303,11 @@ fun DestinationCard(
 }
 
 @Composable
-fun PlannedVisitItem(plan: PlannedVisit) {
+fun PlannedVisitItem(
+    plan: PlannedVisit,
+    onEditClick: () -> Unit,   // Callback Edit
+    onDeleteClick: () -> Unit  // Callback Hapus
+) {
     val destination = remember(plan.destinationId) {
         PlanningViewModel.getDestinationForPlan(plan)
     }
@@ -279,34 +322,54 @@ fun PlannedVisitItem(plan: PlannedVisit) {
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
+                // --- HEADER: Nama, Tanggal + Tombol Action ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Text(
-                        text = dest.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Tampilkan Tanggal
-                    Text(
-                        text = plan.date,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // Kolom Kiri: Nama & Tanggal
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = dest.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = plan.date,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Kolom Kanan: Tombol Edit & Hapus
+                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                        IconButton(onClick = onEditClick) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(onClick = onDeleteClick) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Hapus",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start, // Rata kiri agar rapi
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Menampilkan Rentang Jam (Mulai - Selesai)
+                    // Menampilkan Rentang Jam
                     InfoChip(
                         icon = Icons.Default.Schedule,
                         text = "${plan.startTime} - ${plan.endTime}"
