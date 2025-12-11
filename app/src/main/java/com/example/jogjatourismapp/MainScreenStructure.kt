@@ -36,13 +36,18 @@ val bottomNavItems = listOf(BottomNavItem.Home, BottomNavItem.Wishlist, BottomNa
 
 @Composable
 fun HomeScreen(onDestinationClick: (Int) -> Unit) {
+    // --- UPDATE: Ambil Nama User yang Sedang Login ---
+    val currentUser = UserManager.currentUser
+    val displayName = currentUser?.name ?: "Pengunjung"
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text("Selamat Datang, Ignatius Panji S.P!", style = MaterialTheme.typography.titleLarge)
+            // Tampilkan Nama Dinamis
+            Text("Selamat Datang, $displayName!", style = MaterialTheme.typography.titleLarge)
         }
 
         item {
@@ -73,14 +78,15 @@ fun HomeScreen(onDestinationClick: (Int) -> Unit) {
 @Composable
 fun WishlistPlanningScreen(
     plannedVisits: List<PlannedVisit>,
-    navController: NavController // Tambahkan parameter ini untuk navigasi edit
+    navController: NavController
 ) {
     val context = LocalContext.current
+
     // State untuk dialog hapus
     var showDeleteDialog by remember { mutableStateOf(false) }
     var planToDelete by remember { mutableStateOf<PlannedVisit?>(null) }
 
-    // 2. TEMPEL KODE DIALOG DI SINI
+    // Dialog Konfirmasi Hapus
     if (showDeleteDialog && planToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -105,6 +111,7 @@ fun WishlistPlanningScreen(
             }
         )
     }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -151,7 +158,6 @@ fun WishlistPlanningScreen(
                     PlannedVisitItem(
                         plan = plan,
                         onEditClick = {
-                            // Navigasi ke BookingScreen dengan parameter visitId
                             navController.navigate("booking/${plan.destinationId}?visitId=${plan.visitId}")
                         },
                         onDeleteClick = {
@@ -167,6 +173,9 @@ fun WishlistPlanningScreen(
 
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
+    // --- UPDATE: Ambil Data User Dinamis ---
+    val currentUser = UserManager.currentUser
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -174,12 +183,35 @@ fun ProfileScreen(onLogout: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Icon User Besar
+        Icon(
+            imageVector = Icons.Filled.AccountCircle,
+            contentDescription = "Profile Picture",
+            modifier = Modifier.size(120.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Spacer(Modifier.height(24.dp))
         Text("Halaman Profil", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
-        Text("Nama: Ignatius Panji S.P", style = MaterialTheme.typography.bodyLarge)
-        Text("Email: ignatiuspanjisp@gmail.com", style = MaterialTheme.typography.bodyLarge)
+
+        // Tampilkan Data User
+        if (currentUser != null) {
+            Text("Nama: ${currentUser.name}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text("Email: ${currentUser.email}", style = MaterialTheme.typography.bodyLarge)
+        } else {
+            // Fallback jika terjadi error
+            Text("Nama: -", style = MaterialTheme.typography.bodyLarge)
+            Text("Email: -", style = MaterialTheme.typography.bodyLarge)
+        }
+
         Spacer(Modifier.height(32.dp))
-        Button(onClick = onLogout) {
+
+        Button(
+            onClick = onLogout,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        ) {
             Text("Logout")
         }
     }
@@ -311,8 +343,8 @@ fun DestinationCard(
 @Composable
 fun PlannedVisitItem(
     plan: PlannedVisit,
-    onEditClick: () -> Unit,   // Callback Edit
-    onDeleteClick: () -> Unit  // Callback Hapus
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val destination = remember(plan.destinationId) {
         PlanningViewModel.getDestinationForPlan(plan)
