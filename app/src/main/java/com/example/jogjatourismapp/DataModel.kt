@@ -10,12 +10,12 @@ import coil.compose.AsyncImage
 data class Destination(
     val id: Int,
     val name: String,
-    val category: String,      // Contoh: "Beach", "Traditional", "Food", dll.
+    val category: String,
     val location: String,
     val rating: Float,
     val description: String,
-    val price: Int,            // Harga tiket masuk
-    val imageUrl: String, // URL gambar
+    val price: Int,
+    val imageUrl: String,
     val mapsUrl: String
 )
 
@@ -54,7 +54,7 @@ val popularDestinations = listOf(
         description = "Landmark ikonik Yogyakarta yang menjadi simbol persatuan antara rakyat dan raja.",
         price = 0,
         imageUrl = "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/17/bf/47/61/yogyakarta-monument.jpg?w=700&h=400&s=1",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/3bXj9TCr3AeuD97c8?g_st=aw"
     ),
     Destination(
         id = 102,
@@ -65,7 +65,7 @@ val popularDestinations = listOf(
         description = "Pantai populer dengan ombak besar, pemandangan sunset yang indah, dan kisah budaya Nyi Roro Kidul.",
         price = 10000,
         imageUrl = "https://avilorentcar.com/wp-content/uploads/2025/04/pantai-parangtritis-300x300.jpg",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/55Ti9bbws7ajxAJf6?g_st=aw"
     ),
     Destination(
         id = 103,
@@ -76,7 +76,7 @@ val popularDestinations = listOf(
         description = "Kompleks candi Hindu terbesar di Indonesia dan salah satu yang terindah di Asia Tenggara.",
         price = 50000,
         imageUrl = "https://images.unsplash.com/photo-1566559631133-969041fc5583?q=80&w=327&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/yS93gtjhFDRw8hRR9?g_st=aw"
     ),
     Destination(
         id = 104,
@@ -87,7 +87,7 @@ val popularDestinations = listOf(
         description = "Kawasan belanja dan wisata paling populer di Yogyakarta yang penuh dengan oleh-oleh dan street food.",
         price = 0,
         imageUrl = "https://asset.kompas.com/crops/tp7dCEi1zgzGJG-ZhoFOZwi2TGs=/0x0:972x648/1200x800/data/photo/2021/12/26/61c813b14760e.png",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/zv9G1M2RVZCiYmhm7?g_st=aw"
     ),
     Destination(
         id = 106,
@@ -98,7 +98,7 @@ val popularDestinations = listOf(
         description = "Istana resmi Kesultanan Yogyakarta yang masih berfungsi hingga saat ini dengan arsitektur Jawa klasik.",
         price = 15000,
         imageUrl = "https://4sirteameyesonly.superlive.id/storage/articles/b5707100ae88.png",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/FB5zALduUgWzXQJa8?g_st=aw"
     ),
     Destination(
         id = 107,
@@ -109,7 +109,7 @@ val popularDestinations = listOf(
         description = "Pantai dengan pasir putih bersih, air jernih, dan deretan kafe-kafe modern menghadap laut.",
         price = 10000,
         imageUrl = "https://nagantour.com/wp-content/uploads/2023/10/pantai-indrayanti-favorite.webp",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/b3gahZwtSEtXjJy46?g_st=aw"
     ),
     Destination(
         id = 108,
@@ -120,7 +120,7 @@ val popularDestinations = listOf(
         description = "Taman air bekas tempat pemandian keluarga Sultan dengan arsitektur unik perpaduan Jawa-Eropa.",
         price = 15000,
         imageUrl = "https://akcdn.detik.net.id/community/media/visual/2023/04/11/taman-sari_169.png?w=700&q=90",
-        mapsUrl = "https://maps.app.goo.gl/rhAQuguHNZ1YG3S16"
+        mapsUrl = "https://maps.app.goo.gl/8uSGcsrNMDDYA3mKA?g_st=aw"
     )
 )
 
