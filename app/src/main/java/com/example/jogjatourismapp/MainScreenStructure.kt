@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 
 // Item yang akan ditampilkan di Bottom Navigation Bar
 sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
@@ -73,11 +75,12 @@ fun WishlistPlanningScreen(
     plannedVisits: List<PlannedVisit>,
     navController: NavController // Tambahkan parameter ini untuk navigasi edit
 ) {
+    val context = LocalContext.current
     // State untuk dialog hapus
     var showDeleteDialog by remember { mutableStateOf(false) }
     var planToDelete by remember { mutableStateOf<PlannedVisit?>(null) }
 
-    // Dialog Konfirmasi Hapus
+    // 2. TEMPEL KODE DIALOG DI SINI
     if (showDeleteDialog && planToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -85,7 +88,11 @@ fun WishlistPlanningScreen(
             text = { Text("Apakah Anda yakin ingin menghapus rencana ke tempat ini?") },
             confirmButton = {
                 TextButton(onClick = {
+                    // Hapus data
                     PlanningViewModel.removePlan(planToDelete!!)
+                    // Tampilkan pesan sukses
+                    Toast.makeText(context, "Rencana berhasil dihapus!", Toast.LENGTH_SHORT).show()
+                    // Tutup dialog
                     showDeleteDialog = false
                 }) {
                     Text("Hapus", color = MaterialTheme.colorScheme.error)
@@ -98,7 +105,6 @@ fun WishlistPlanningScreen(
             }
         )
     }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
