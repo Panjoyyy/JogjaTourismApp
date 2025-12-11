@@ -12,15 +12,15 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SplashLandingScreen(
-    onStartClick: () -> Unit,
-    onLoginClick: () -> Unit
+    onLoginClick: () -> Unit,    // Parameter 1: Tombol Atas (Login)
+    onRegisterClick: () -> Unit  // Parameter 2: Tombol Bawah (Daftar)
 ) {
     val imageResourceId = R.drawable.logo_tugu_jogja
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)  // ★ Tambahkan ini
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
 
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -37,38 +37,40 @@ fun SplashLandingScreen(
         Text(
             "Jelajahi Pesona Jogja",
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary         // ★ Gunakan warna tema
+            color = MaterialTheme.colorScheme.primary
         )
 
         Text(
             "Temukan Wisata, Kuliner, dan Penginapan Terbaik!",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground    // ★ Warna teks dari tema
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(48.dp))
 
+        // --- TOMBOL 1 (ATAS): LOGIN ---
         Button(
-            onClick = onStartClick,
+            onClick = onLoginClick,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,  // ★ Biru Jogja
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text("Mulai")
+            Text("Login")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // --- TOMBOL 2 (BAWAH): DAFTAR ---
         OutlinedButton(
-            onClick = onLoginClick,
+            onClick = onRegisterClick,
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary     // ★ Outline biru
+                contentColor = MaterialTheme.colorScheme.primary
             ),
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
-            Text("Login")
+            Text("Daftar Akun")
         }
     }
 }
