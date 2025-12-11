@@ -1,45 +1,26 @@
 package com.example.jogjatourismapp
 
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 // Item yang akan ditampilkan di Bottom Navigation Bar
@@ -51,148 +32,144 @@ sealed class BottomNavItem(val route: String, val label: String, val icon: Image
 
 val bottomNavItems = listOf(BottomNavItem.Home, BottomNavItem.Wishlist, BottomNavItem.Profile)
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainScreenStructure(
-    rootNavController: NavHostController // NavController utama dari MainActivity
-) {
-    // NavController khusus untuk Bottom Nav Graph
-    val homeNavController = rememberNavController()
-
-    Scaffold(
-        bottomBar = { AppBottomNavigation(homeNavController = homeNavController) }
-    ) { paddingValues ->
-        // NavHost untuk mengelola perpindahan di dalam HomeNavGraph
-        HomeNavGraph(
-            homeNavController = homeNavController,
-            rootNavController = rootNavController, // Diperlukan untuk navigasi ke Detail
-            modifier = Modifier.padding(paddingValues)
-        )
-    }
-}
-
-// Implementasi Bottom Navigation Bar
-@Composable
-fun AppBottomNavigation(homeNavController: NavHostController) {
-    NavigationBar {
-        val navBackStackEntry by homeNavController.currentBackStackEntryAsState()
-        val currentDestination = navBackStackEntry?.destination
-
-        bottomNavItems.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) },
-                selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                onClick = {
-                    homeNavController.navigate(item.route) {
-                        // Hindari menumpuk destinasi saat berpindah Bottom Nav
-                        popUpTo(homeNavController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        // Hindari membuat banyak salinan destinasi
-                        launchSingleTop = true
-                        // Mempertahankan state saat berpindah tab
-                        restoreState = true
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-fun HomeNavGraph(
-    homeNavController: NavHostController,
-    rootNavController: NavHostController,
-    modifier: Modifier = Modifier
-) {
-    NavHost(
-        homeNavController,
-        startDestination = Screen.Home.route,
-        modifier = modifier
-    ) {
-        // View 2: Home Page (Dashboard)
-        composable(Screen.Home.route) {
-            HomeScreen(
-                onDestinationClick = { destinationId ->
-                    // Navigasi ke Detail menggunakan Root NavController
-                    rootNavController.navigate(Screen.Detail().createRoute(destinationId))
-                }
-            )
-        }
-
-        // View 4: Wishlist & Trip Planning
-        composable(Screen.WishlistPlanning.route) {
-            WishlistPlanningScreen()
-        }
-
-        // View 5: Profile
-        composable(Screen.Profile.route) {
-            ProfileScreen(
-                onLogout = {
-                    // Kembali ke Splash
-                    rootNavController.navigate(Screen.SplashLanding.route) {
-                        popUpTo(rootNavController.graph.id) { inclusive = true }
-                    }
-                }
-            )
-        }
-    }
-}
-
-// -----------------------------------------------------
-// Placeholder untuk View 2, 4, 5
-// -----------------------------------------------------
-
 @Composable
 fun HomeScreen(onDestinationClick: (Int) -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Selamat Datang, Ignatius Panji S.P!", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(16.dp))
-
-        Text("Kategori", style = MaterialTheme.typography.titleMedium)
-        // LazyRow untuk Kategori
-        // LazyRow untuk Kategori
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(categoriesData) { category ->
-                CategoryItem(category = category)
-            }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Text("Selamat Datang, Ignatius Panji S.P!", style = MaterialTheme.typography.titleLarge)
         }
 
-        Spacer(Modifier.height(24.dp))
-
-        Text("Tempat Paling Populer", style = MaterialTheme.typography.titleMedium)
-
-        // LazyColumn untuk Destinasi Populer
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(popularDestinations) { destination ->
-                DestinationCard(
-                    destination = destination,
-                    onClick = { onDestinationClick(destination.id) }
-                )
+        item {
+            Text("Kategori", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(categoriesData) { category ->
+                    CategoryItem(category = category)
                 }
             }
         }
+
+        item {
+            Text("Tempat Paling Populer", style = MaterialTheme.typography.titleMedium)
+        }
+
+        items(popularDestinations) { destination ->
+            DestinationCard(
+                destination = destination,
+                onClick = { onDestinationClick(destination.id) }
+            )
+        }
     }
+}
 
 @Composable
-fun WishlistPlanningScreen() {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Wishlist & Trip Planning", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(8.dp))
-        Text("Anda bisa melihat daftar tempat yang Anda suka dan rencana perjalanan di sini.")
+fun WishlistPlanningScreen(
+    plannedVisits: List<PlannedVisit>,
+    navController: NavController // Tambahkan parameter ini untuk navigasi edit
+) {
+    // State untuk dialog hapus
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var planToDelete by remember { mutableStateOf<PlannedVisit?>(null) }
+
+    // Dialog Konfirmasi Hapus
+    if (showDeleteDialog && planToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Hapus Rencana") },
+            text = { Text("Apakah Anda yakin ingin menghapus rencana ke tempat ini?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    PlanningViewModel.removePlan(planToDelete!!)
+                    showDeleteDialog = false
+                }) {
+                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            "Rencana Perjalanan Saya",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(16.dp))
+
+        if (plannedVisits.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Filled.EventBusy,
+                        contentDescription = "Tidak ada rencana",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Anda belum memiliki rencana.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        "Coba buat rencana dari halaman detail destinasi.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(plannedVisits.sortedBy { it.date }) { plan ->
+                    PlannedVisitItem(
+                        plan = plan,
+                        onEditClick = {
+                            // Navigasi ke BookingScreen dengan parameter visitId
+                            navController.navigate("booking/${plan.destinationId}?visitId=${plan.visitId}")
+                        },
+                        onDeleteClick = {
+                            planToDelete = plan
+                            showDeleteDialog = true
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
         Text("Halaman Profil", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(16.dp))
         Text("Nama: Ignatius Panji S.P", style = MaterialTheme.typography.bodyLarge)
         Text("Email: ignatiuspanjisp@gmail.com", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(32.dp))
@@ -222,7 +199,7 @@ fun CategoryItem(category: Category) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = category.icon,  // Ubah dari painterResource
+                    imageVector = category.icon,
                     contentDescription = category.title,
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -252,7 +229,6 @@ fun DestinationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
-            // Gambar destinasi
             AsyncImage(
                 model = destination.imageUrl,
                 contentDescription = destination.name,
@@ -263,8 +239,6 @@ fun DestinationCard(
                 placeholder = painterResource(android.R.drawable.ic_menu_gallery),
                 error = painterResource(android.R.drawable.ic_menu_gallery)
             )
-
-            // Informasi destinasi
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -279,10 +253,7 @@ fun DestinationCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
                     Spacer(Modifier.height(4.dp))
-
-                    // Lokasi
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Filled.LocationOn,
@@ -300,14 +271,11 @@ fun DestinationCard(
                         )
                     }
                 }
-
-                // Rating dan Harga
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rating
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Filled.Star,
@@ -322,8 +290,6 @@ fun DestinationCard(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-
-                    // Harga
                     Text(
                         text = if (destination.price == 0) "Gratis" else "Rp ${formatPrice(destination.price)}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -336,7 +302,119 @@ fun DestinationCard(
     }
 }
 
-// Fungsi helper untuk format harga
+@Composable
+fun PlannedVisitItem(
+    plan: PlannedVisit,
+    onEditClick: () -> Unit,   // Callback Edit
+    onDeleteClick: () -> Unit  // Callback Hapus
+) {
+    val destination = remember(plan.destinationId) {
+        PlanningViewModel.getDestinationForPlan(plan)
+    }
+
+    destination?.let { dest ->
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                // --- HEADER: Nama, Tanggal + Tombol Action ---
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Kolom Kiri: Nama & Tanggal
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = dest.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = plan.date,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Kolom Kanan: Tombol Edit & Hapus
+                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                        IconButton(onClick = onEditClick) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(onClick = onDeleteClick) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Hapus",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Menampilkan Rentang Jam
+                    InfoChip(
+                        icon = Icons.Default.Schedule,
+                        text = "${plan.startTime} - ${plan.endTime}"
+                    )
+
+                    Spacer(Modifier.width(16.dp))
+
+                    // Menampilkan Jumlah Orang
+                    InfoChip(
+                        icon = Icons.Default.Group,
+                        text = "${plan.personCount} org"
+                    )
+                }
+
+                if (dest.price > 0) {
+                    Spacer(Modifier.height(12.dp))
+                    Divider()
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Total: Rp ${formatPrice(dest.price * plan.personCount)}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.End),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoChip(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.secondary
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(text = text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
 fun formatPrice(price: Int): String {
     return String.format("%,d", price).replace(',', '.')
 }
