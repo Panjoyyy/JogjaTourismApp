@@ -10,8 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,36 +22,47 @@ import java.util.*
 fun BookingScreen(
     destinationId: Int,
     onBackClicked: () -> Unit,
-    // Lambda ini sekarang hanya perlu memberi tahu bahwa simpan berhasil
     onSaveClicked: () -> Unit
 ) {
     val destination = remember(destinationId) { getDestinationById(destinationId) }
     val context = LocalContext.current
 
-    // State untuk menyimpan semua input dari pengguna
+    // State input
     var selectedDate by remember { mutableStateOf("") }
-    var selectedTime by remember { mutableStateOf("") }
+    var startTime by remember { mutableStateOf("") } // Jam Mulai
+    var endTime by remember { mutableStateOf("") }   // Jam Selesai
     var personCount by remember { mutableStateOf(1) }
-    var estimatedDuration by remember { mutableStateOf("") }
 
-    // State untuk validasi form
+    // Validasi form: Pastikan tanggal, jam mulai, dan jam selesai terisi
     val isFormValid by remember {
         derivedStateOf {
-            selectedDate.isNotBlank() && selectedTime.isNotBlank() && estimatedDuration.isNotBlank()
+            selectedDate.isNotBlank() && startTime.isNotBlank() && endTime.isNotBlank()
         }
     }
 
-    // --- Pengaturan untuk Dialog Pemilih Tanggal & Waktu (Sama seperti sebelumnya) ---
+    // --- Setup Calendar & Dialogs ---
     val calendar = Calendar.getInstance()
+
+    // Dialog Tanggal
     val datePickerDialog = DatePickerDialog(
         context,
         { _: DatePicker, year, month, day -> selectedDate = "$day/${month + 1}/$year" },
         calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
     )
-    val timePickerDialog = TimePickerDialog(
+
+    // Dialog Jam Mulai
+    val startTimePickerDialog = TimePickerDialog(
         context,
-        { _, hour, minute -> selectedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute) },
+        { _, hour, minute -> startTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute) },
         calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true
+    )
+
+    // Dialog Jam Selesai
+    val endTimePickerDialog = TimePickerDialog(
+        context,
+        { _, hour, minute -> endTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute) },
+        calendar.get(Calendar.HOUR_OF_DAY) + 2, // Default 2 jam setelahnya
+        calendar.get(Calendar.MINUTE), true
     )
 
     Scaffold(
@@ -70,7 +79,7 @@ fun BookingScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()), // Membuat kolom bisa di-scroll
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.height(16.dp))
@@ -84,21 +93,54 @@ fun BookingScreen(
                 )
                 Spacer(Modifier.height(24.dp))
 
-                // --- 1. Input Tanggal & Waktu ---
-                OutlinedButton(onClick = { datePickerDialog.show() }, modifier = Modifier.fillMaxWidth()) {
+                // --- 1. Input Tanggal ---
+                OutlinedButton(
+                    onClick = { datePickerDialog.show() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(if (selectedDate.isNotBlank()) "Tanggal: $selectedDate" else "Pilih Tanggal")
+                    Text(if (selectedDate.isNotBlank()) "Tanggal: $selectedDate" else "Pilih Tanggal Kunjungan")
                 }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { timePickerDialog.show() }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Schedule, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (selectedTime.isNotBlank()) "Jam: $selectedTime" else "Pilih Jam")
+
+                Spacer(Modifier.height(16.dp))
+
+                // --- 2. Input Jam Mulai & Selesai (Side by Side) ---
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Tombol Jam Mulai
+                    OutlinedButton(
+                        onClick = { startTimePickerDialog.show() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Schedule, contentDescription = null)
+                            Text("Mulai")
+                            Text(
+                                text = if (startTime.isNotBlank()) startTime else "--:--",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Tombol Jam Selesai
+                    OutlinedButton(
+                        onClick = { endTimePickerDialog.show() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.TimerOff, contentDescription = null)
+                            Text("Selesai")
+                            Text(
+                                text = if (endTime.isNotBlank()) endTime else "--:--",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
+
                 Spacer(Modifier.height(24.dp))
 
-                // --- 2. Input Jumlah Orang ---
+                // --- 3. Input Jumlah Orang ---
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -114,30 +156,27 @@ fun BookingScreen(
                 }
                 Spacer(Modifier.height(24.dp))
 
-                // --- 3. Input Estimasi Durasi ---
-                OutlinedTextField(
-                    value = estimatedDuration,
-                    onValueChange = { estimatedDuration = it },
-                    label = { Text("Estimasi Durasi (Contoh: 2-3 jam)") },
-                    leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(24.dp))
-
                 // --- 4. Tampilan Estimasi Biaya ---
                 if (dest.price > 0) {
                     val totalCost = dest.price * personCount
-                    Text("Estimasi Biaya Tiket", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        text = "Rp ${formatPrice(totalCost)}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = "(${formatPrice(dest.price)} x $personCount orang)",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Total Biaya Tiket", style = MaterialTheme.typography.labelLarge)
+                            Text(
+                                text = "Rp ${formatPrice(totalCost)}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "(${formatPrice(dest.price)} x $personCount orang)",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                 } else {
                     Text(
                         "Destinasi ini Gratis",
@@ -156,12 +195,11 @@ fun BookingScreen(
                     val newPlan = PlannedVisit(
                         destinationId = destinationId,
                         date = selectedDate,
-                        time = selectedTime,
+                        startTime = startTime, // Simpan jam mulai
+                        endTime = endTime,     // Simpan jam selesai
                         personCount = personCount,
-                        estimatedDuration = estimatedDuration,
-                        notes = "" // Catatan bisa ditambahkan di masa depan
+                        notes = ""
                     )
-                    // Panggil fungsi addPlan dari ViewModel
                     PlanningViewModel.addPlan(newPlan)
                     onSaveClicked()
                 },
