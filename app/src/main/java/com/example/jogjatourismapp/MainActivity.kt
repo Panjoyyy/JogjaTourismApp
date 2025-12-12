@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -229,7 +230,11 @@ fun BottomNavBar(homeNavController: NavHostController) {
     val navBackStackEntry by homeNavController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface, // Background putih
+        contentColor = MaterialTheme.colorScheme.primary,   // Warna biru
+        tonalElevation = 8.dp
+    ) {
         bottomNavItems.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.label) },
@@ -243,7 +248,14 @@ fun BottomNavBar(homeNavController: NavHostController) {
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,        // Icon biru saat dipilih
+                    selectedTextColor = MaterialTheme.colorScheme.primary,        // Text biru saat dipilih
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Abu-abu
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant, // Abu-abu
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer   // Background biru muda
+                )
             )
         }
     }
