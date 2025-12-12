@@ -24,6 +24,15 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Warning
 
 // Item yang akan ditampilkan di Bottom Navigation Bar
 sealed class BottomNavItem(val route: String, val label: String, val icon: ImageVector) {
@@ -34,43 +43,193 @@ sealed class BottomNavItem(val route: String, val label: String, val icon: Image
 
 val bottomNavItems = listOf(BottomNavItem.Home, BottomNavItem.Wishlist, BottomNavItem.Profile)
 
+// Tambahkan fungsi helper ini di atas HomeScreen di dalam MainScreenStructure.kt
+@Composable
+fun getCombinedCategories(): List<Category> {
+    val allCategory = Category("All", Icons.Filled.FilterNone) // Icon placeholder untuk "All"
+    // Menggabungkan kategori All dengan data kategori dari DataModel.kt
+    return remember { listOf(allCategory) + categoriesData }
+}
+
 @Composable
 fun HomeScreen(onDestinationClick: (Int) -> Unit) {
-    // --- UPDATE: Ambil Nama User yang Sedang Login ---
-    val currentUser = UserManager.currentUser
-    val displayName = currentUser?.name ?: "Pengunjung"
+    var selectedCategory by remember { mutableStateOf("All") }
+    var searchQuery by remember { mutableStateOf("") }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            // Tampilkan Nama Dinamis
-            Text("Selamat Datang, $displayName!", style = MaterialTheme.typography.titleLarge)
+    val allCategories = getCombinedCategories()
+    val displayName = remember {
+        UserManager.currentUser?.name ?: "Pengguna"
+    }
+
+    val filteredDestinations = remember(selectedCategory, searchQuery) {
+        val baseList = if (selectedCategory == "All") {
+            popularDestinations
+        } else {
+            getDestinationsByCategory(selectedCategory)
         }
 
-        item {
-            Text("Kategori", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        if (searchQuery.isBlank()) {
+            baseList
+        } else {
+            baseList.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.location.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Header dengan Background Biru (Traveloka Style)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            shadowElevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
-                items(categoriesData) { category ->
-                    CategoryItem(category = category)
-                }
+                // Welcome Text
+                Text(
+                    text = "Halo, $displayName! 👋",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = "Mau jalan-jalan kemana hari ini?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                // Search Bar with White Background
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Cari destinasi wisata...") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                    )
+                )
             }
         }
 
-        item {
-            Text("Tempat Paling Populer", style = MaterialTheme.typography.titleMedium)
-        }
+        // Content dengan Padding
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            Spacer(Modifier.height(20.dp))
 
-        items(popularDestinations) { destination ->
-            DestinationCard(
-                destination = destination,
-                onClick = { onDestinationClick(destination.id) }
-            )
+            // Section Kategori
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Kategori",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // LazyRow Kategori
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(allCategories) { category ->
+                    ImprovedCategoryItem(
+                        category = category,
+                        isSelected = category.title == selectedCategory,
+                        onClick = {
+                            searchQuery = ""
+                            selectedCategory = category.title
+                        }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Section Destinasi Populer
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Destinasi Populer",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        "${filteredDestinations.size} tempat ditemukan",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // LazyColumn Destinasi
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                if (filteredDestinations.isEmpty()) {
+                    item {
+                        EmptyStateCard(selectedCategory)
+                    }
+                } else {
+                    items(filteredDestinations) { destination ->
+                        ImprovedDestinationCard(
+                            destination = destination,
+                            onClick = { onDestinationClick(destination.id) }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -81,8 +240,6 @@ fun WishlistPlanningScreen(
     navController: NavController
 ) {
     val context = LocalContext.current
-
-    // State untuk dialog hapus
     var showDeleteDialog by remember { mutableStateOf(false) }
     var planToDelete by remember { mutableStateOf<PlannedVisit?>(null) }
 
@@ -90,18 +247,35 @@ fun WishlistPlanningScreen(
     if (showDeleteDialog && planToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Hapus Rencana") },
-            text = { Text("Apakah Anda yakin ingin menghapus rencana ke tempat ini?") },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Hapus Rencana",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("Apakah Anda yakin ingin menghapus rencana perjalanan ini?")
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    // Hapus data
-                    PlanningViewModel.removePlan(planToDelete!!)
-                    // Tampilkan pesan sukses
-                    Toast.makeText(context, "Rencana berhasil dihapus!", Toast.LENGTH_SHORT).show()
-                    // Tutup dialog
-                    showDeleteDialog = false
-                }) {
-                    Text("Hapus", color = MaterialTheme.colorScheme.error)
+                Button(
+                    onClick = {
+                        PlanningViewModel.removePlan(planToDelete!!)
+                        Toast.makeText(context, "Rencana berhasil dihapus!", Toast.LENGTH_SHORT).show()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Hapus")
                 }
             },
             dismissButton = {
@@ -115,47 +289,107 @@ fun WishlistPlanningScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Text(
-            "Rencana Perjalanan Saya",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(16.dp))
-
-        if (plannedVisits.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        // Header dengan gradient visual
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            shadowElevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Filled.EventBusy,
-                        contentDescription = "Tidak ada rencana",
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        "Anda belum memiliki rencana.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        imageVector = Icons.Filled.EventNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.White
                     )
                     Text(
-                        "Coba buat rencana dari halaman detail destinasi.",
+                        "Rencana Perjalanan",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
+                if (plannedVisits.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "${plannedVisits.size} rencana tersimpan",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                 }
             }
+        }
+
+        // Content
+        if (plannedVisits.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Surface(
+                    modifier = Modifier.size(120.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EventBusy,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Text(
+                    "Belum Ada Rencana",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "Mulai rencanakan perjalanan Anda!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    "Buka detail destinasi dan klik tombol\n\"Rencanakan\" untuk membuat rencana baru",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(plannedVisits.sortedBy { it.date }) { plan ->
-                    PlannedVisitItem(
+                    ImprovedPlannedVisitItem(
                         plan = plan,
                         onEditClick = {
                             navController.navigate("booking/${plan.destinationId}?visitId=${plan.visitId}")
@@ -172,57 +406,663 @@ fun WishlistPlanningScreen(
 }
 
 @Composable
-fun ProfileScreen(onLogout: () -> Unit) {
-    // --- UPDATE: Ambil Data User Dinamis ---
-    val currentUser = UserManager.currentUser
-
+fun ImprovedCategoryItem(
+    category: Category,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .width(80.dp)
+            .clickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Icon User Besar
-        Icon(
-            imageVector = Icons.Filled.AccountCircle,
-            contentDescription = "Profile Picture",
-            modifier = Modifier.size(120.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(Modifier.height(24.dp))
-        Text("Halaman Profil", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
-
-        // Tampilkan Data User
-        if (currentUser != null) {
-            Text("Nama: ${currentUser.name}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            Text("Email: ${currentUser.email}", style = MaterialTheme.typography.bodyLarge)
-        } else {
-            // Fallback jika terjadi error
-            Text("Nama: -", style = MaterialTheme.typography.bodyLarge)
-            Text("Email: -", style = MaterialTheme.typography.bodyLarge)
+        Card(
+            modifier = Modifier.size(64.dp),
+            shape = CircleShape,
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.primaryContainer
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = if (isSelected) 6.dp else 2.dp
+            )
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = category.icon,
+                    contentDescription = category.title,
+                    modifier = Modifier.size(32.dp),
+                    tint = if (isSelected)
+                        Color.White
+                    else
+                        MaterialTheme.colorScheme.primary
+                )
+            }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(6.dp))
 
-        Button(
-            onClick = onLogout,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+        Text(
+            text = category.title,
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+fun ImprovedDestinationCard(
+    destination: Destination,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(130.dp)
         ) {
-            Text("Logout")
+            // Gambar Destinasi
+            Box(
+                modifier = Modifier
+                    .width(130.dp)
+                    .fillMaxHeight()
+            ) {
+                AsyncImage(
+                    model = destination.imageUrl,
+                    contentDescription = destination.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(android.R.drawable.ic_menu_gallery),
+                    error = painterResource(android.R.drawable.ic_menu_gallery)
+                )
+
+                // Badge Kategori
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
+                ) {
+                    Text(
+                        text = destination.category,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Info Destinasi
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = destination.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.LocationOn,
+                            contentDescription = "Location",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = destination.location,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Rating dan Harga
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Rating dengan background
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFF8E1)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = "Rating",
+                                modifier = Modifier.size(16.dp),
+                                tint = Color(0xFFFFB800)
+                            )
+                            Text(
+                                text = destination.rating.toString(),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF8F00)
+                            )
+                        }
+                    }
+
+                    // Harga
+                    Text(
+                        text = if (destination.price == 0) "Gratis" else "Rp ${formatPrice(destination.price)}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun CategoryItem(category: Category) {
+fun EmptyStateCard(selectedCategory: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.SearchOff,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+
+            Text(
+                text = "Tidak Ada Hasil",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Text(
+                text = "Tidak ada destinasi dalam kategori \"$selectedCategory\"",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+fun ImprovedPlannedVisitItem(
+    plan: PlannedVisit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val destination = remember(plan.destinationId) {
+        PlanningViewModel.getDestinationForPlan(plan)
+    }
+
+    destination?.let { dest ->
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Header dengan background biru
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = dest.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.CalendarToday,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = plan.date,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+
+                        // Action Buttons
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            IconButton(
+                                onClick = onEditClick,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary,
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = onDeleteClick,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.error,
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Hapus",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Content
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Info Cards
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Time Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Column {
+                                    Text(
+                                        text = "Waktu",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        text = "${plan.startTime}-${plan.endTime}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        // People Card
+                        Card(
+                            modifier = Modifier.weight(1f),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Group,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                Column {
+                                    Text(
+                                        text = "Peserta",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                    Text(
+                                        text = "${plan.personCount} orang",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Total Price (jika ada)
+                    if (dest.price > 0) {
+                        Spacer(Modifier.height(12.dp))
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Total Biaya",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Rp ${formatPrice(dest.price * plan.personCount)}",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileScreen(onLogout: () -> Unit) {
+    val currentUser = UserManager.currentUser
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Header dengan background biru
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.primary,
+            shadowElevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Avatar dengan border
+                Surface(
+                    modifier = Modifier.size(100.dp),
+                    shape = CircleShape,
+                    color = Color.White,
+                    border = androidx.compose.foundation.BorderStroke(4.dp, Color.White.copy(alpha = 0.3f))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.AccountCircle,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.size(90.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Profil Saya",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+
+        // Content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Info Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Informasi Akun",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    // Nama
+                    ProfileInfoRow(
+                        icon = Icons.Filled.Person,
+                        label = "Nama",
+                        value = currentUser?.name ?: "-"
+                    )
+
+                    // Email
+                    ProfileInfoRow(
+                        icon = Icons.Filled.Email,
+                        label = "Email",
+                        value = currentUser?.email ?: "-"
+                    )
+                }
+            }
+
+            // Statistik Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    StatItem(
+                        icon = Icons.Filled.EventAvailable,
+                        count = PlanningViewModel.plannedVisits.size,
+                        label = "Rencana"
+                    )
+
+                    Divider(
+                        modifier = Modifier
+                            .height(60.dp)
+                            .width(1.dp),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+
+                    StatItem(
+                        icon = Icons.Filled.Place,
+                        count = popularDestinations.size,
+                        label = "Destinasi"
+                    )
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Logout Button
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Logout",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileInfoRow(icon: ImageVector, label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+fun StatItem(icon: ImageVector, count: Int, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(32.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+@Composable
+fun CategoryItem(category: Category, isSelected: Boolean, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(80.dp)
-            .clickable { /* Handle click */ },
+            .clickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
@@ -264,7 +1104,11 @@ fun DestinationCard(
             .fillMaxWidth()
             .height(120.dp)
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface // Background putih
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
@@ -289,7 +1133,8 @@ fun DestinationCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface // Hitam
                     )
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -297,13 +1142,13 @@ fun DestinationCard(
                             imageVector = Icons.Filled.LocationOn,
                             contentDescription = "Location",
                             modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant // Abu-abu
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = destination.location,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, // Abu-abu
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -319,27 +1164,27 @@ fun DestinationCard(
                             imageVector = Icons.Filled.Star,
                             contentDescription = "Rating",
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFFFFB800)
+                            tint = Color(0xFFFFB800) // Kuning rating (tetap)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = destination.rating.toString(),
                             style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface // Hitam
                         )
                     }
                     Text(
                         text = if (destination.price == 0) "Gratis" else "Rp ${formatPrice(destination.price)}",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary // Biru
                     )
                 }
             }
         }
     }
 }
-
 @Composable
 fun PlannedVisitItem(
     plan: PlannedVisit,
