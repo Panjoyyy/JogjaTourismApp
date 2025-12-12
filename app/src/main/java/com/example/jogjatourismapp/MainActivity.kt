@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -35,9 +36,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Object untuk menyimpan state navigasi
+// Object untuk menyimpan state navigasi antar tab
 object NavigationState {
     var targetTab: String? by mutableStateOf(null)
+}
+
+// Object untuk rute tambahan (Login & Register)
+object ScreenRoute {
+    const val Login = "login_screen"
+    const val Register = "register_screen"
 }
 
 @Composable
@@ -45,25 +52,67 @@ fun AppRootNavHost() {
     val rootNavController = rememberNavController()
     val context = LocalContext.current
 
+    // Cek otomatis saat aplikasi dibuka: Jika user sudah login, langsung ke Home
+    LaunchedEffect(Unit) {
+        if (UserManager.currentUser != null) {
+            rootNavController.navigate(Screen.HomeNavGraph.route) {
+                popUpTo(Screen.SplashLanding.route) { inclusive = true }
+            }
+        }
+    }
+
     NavHost(
         navController = rootNavController,
         startDestination = Screen.SplashLanding.route
     ) {
+        // 1. Splash Screen (DIPERBARUI)
         composable(Screen.SplashLanding.route) {
             SplashLandingScreen(
-                onStartClick = {
+                onLoginClick = {
+                    // Tombol Atas diklik -> Ke Layar Login
+                    rootNavController.navigate(ScreenRoute.Login)
+                },
+                onRegisterClick = {
+                    // Tombol Bawah diklik -> Ke Layar Daftar
+                    rootNavController.navigate(ScreenRoute.Register)
+                }
+            )
+        }
+
+        // 2. Login Screen (BARU)
+        composable(ScreenRoute.Login) {
+            LoginScreen(
+                onLoginSuccess = {
+                    // Login Sukses -> Masuk ke Home & Hapus history balik
                     rootNavController.navigate(Screen.HomeNavGraph.route) {
                         popUpTo(Screen.SplashLanding.route) { inclusive = true }
                     }
                 },
-                onLoginClick = { }
+                onRegisterClick = {
+                    rootNavController.navigate(ScreenRoute.Register)
+                }
             )
         }
 
+        // 3. Register Screen (BARU)
+        composable(ScreenRoute.Register) {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    // Register Sukses -> Kembali ke Login agar user login manual
+                    rootNavController.popBackStack()
+                },
+                onLoginClick = {
+                    rootNavController.popBackStack() // Kembali ke Login
+                }
+            )
+        }
+
+        // 4. Graph Utama (Home, Wishlist, Profile)
         composable(Screen.HomeNavGraph.route) {
             MainBottomNavScreen(rootNavController = rootNavController)
         }
 
+        // 5. Detail Destinasi
         composable(
             route = Screen.Detail().route,
             arguments = listOf(navArgument("destinationId") { type = NavType.IntType })
@@ -83,7 +132,7 @@ fun AppRootNavHost() {
             )
         }
 
-        // --- UPDATE 1: Rute Booking menerima parameter opsional visitId ---
+        // 6. Booking / Rencana (Edit & Baru)
         composable(
             route = "booking/{destinationId}?visitId={visitId}",
             arguments = listOf(
@@ -102,9 +151,6 @@ fun AppRootNavHost() {
                 visitIdToEdit = visitId, // Kirim ID ke layar booking
                 onBackClicked = { rootNavController.popBackStack() },
                 onSaveClicked = {
-                    // Pesan sukses sudah ditangani di dalam BookingScreen logic (opsional bisa dihapus disini)
-                    // Toast.makeText(context, "Berhasil disimpan!", Toast.LENGTH_LONG).show()
-
                     // Set target tab ke Wishlist agar user langsung melihat hasilnya
                     NavigationState.targetTab = Screen.WishlistPlanning.route
 
@@ -154,17 +200,21 @@ fun MainBottomNavScreen(rootNavController: NavHostController) {
                 )
             }
 
-            // --- UPDATE 2: Kirim rootNavController ke WishlistPlanningScreen ---
+            // Kirim rootNavController ke WishlistPlanningScreen untuk fitur Edit
             composable(Screen.WishlistPlanning.route) {
                 WishlistPlanningScreen(
                     plannedVisits = PlanningViewModel.plannedVisits,
-                    navController = rootNavController // Diperlukan untuk navigasi ke Edit
+                    navController = rootNavController
                 )
             }
 
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onLogout = {
+                        // LOGOUT LOGIC: Hapus sesi user
+                        UserManager.logout()
+
+                        // Navigasi ke Awal
                         rootNavController.navigate(Screen.SplashLanding.route) {
                             popUpTo(0) { inclusive = true }
                         }
@@ -180,7 +230,11 @@ fun BottomNavBar(homeNavController: NavHostController) {
     val navBackStackEntry by homeNavController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface, // Background putih
+        contentColor = MaterialTheme.colorScheme.primary,   // Warna biru
+        tonalElevation = 8.dp
+    ) {
         bottomNavItems.forEach { item ->
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = item.label) },
@@ -194,7 +248,14 @@ fun BottomNavBar(homeNavController: NavHostController) {
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,        // Icon biru saat dipilih
+                    selectedTextColor = MaterialTheme.colorScheme.primary,        // Text biru saat dipilih
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant, // Abu-abu
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant, // Abu-abu
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer   // Background biru muda
+                )
             )
         }
     }
